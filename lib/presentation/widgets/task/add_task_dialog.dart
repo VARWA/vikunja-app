@@ -1,14 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:vikunja_app/core/utils/date_extensions.dart';
 import 'package:vikunja_app/domain/entities/new_task_due.dart';
+import 'package:vikunja_app/domain/entities/project.dart';
 import 'package:vikunja_app/presentation/widgets/date_time_field.dart';
 import 'package:vikunja_app/l10n/gen/app_localizations.dart';
 
 class AddTaskDialog extends StatefulWidget {
-  final void Function(String title, DateTime? dueDate) onAddTask;
+  final void Function(String title, DateTime? dueDate, int? projectId)
+  onAddTask;
   final String? title;
+  final List<Project> projects;
+  final int? initialProjectId;
 
-  const AddTaskDialog({super.key, required this.onAddTask, this.title});
+  const AddTaskDialog({
+    super.key,
+    required this.onAddTask,
+    this.title,
+    this.projects = const [],
+    this.initialProjectId,
+  });
 
   @override
   State<StatefulWidget> createState() => AddTaskDialogState();
@@ -18,6 +28,7 @@ class AddTaskDialogState extends State<AddTaskDialog> {
   NewTaskDue newTaskDue = NewTaskDue.none;
   DateTime? dueDate;
   var textController = TextEditingController();
+  int? selectedProjectId;
 
   @override
   void initState() {
@@ -27,6 +38,7 @@ class AddTaskDialogState extends State<AddTaskDialog> {
     if (title != null) {
       textController.text = title;
     }
+    selectedProjectId = widget.initialProjectId;
   }
 
   @override
@@ -50,6 +62,35 @@ class AddTaskDialogState extends State<AddTaskDialog> {
             ),
             controller: textController,
           ),
+          if (widget.projects.length > 1)
+            Padding(
+              padding: const EdgeInsets.only(top: 16.0),
+              child: DropdownButtonFormField<int>(
+                value: selectedProjectId,
+                decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context).project,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                items: widget.projects
+                    .map(
+                      (project) => DropdownMenuItem(
+                        value: project.id,
+                        child: Text(
+                          project.title,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) {
+                  setState(() {
+                    selectedProjectId = value;
+                  });
+                },
+              ),
+            ),
           Padding(
             padding: const EdgeInsets.only(top: 16.0, bottom: 8.0),
             child: Text(AppLocalizations.of(context).dueDate),
@@ -134,7 +175,7 @@ class AddTaskDialogState extends State<AddTaskDialog> {
           child: Text(AppLocalizations.of(context).add),
           onPressed: () {
             if (textController.text.isNotEmpty) {
-              widget.onAddTask(textController.text, dueDate);
+              widget.onAddTask(textController.text, dueDate, selectedProjectId);
             }
             Navigator.pop(context);
           },
