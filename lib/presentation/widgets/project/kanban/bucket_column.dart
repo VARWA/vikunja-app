@@ -333,16 +333,23 @@ class _BucketColumnState extends ConsumerState<BucketColumn> {
       builder: (_) => AddTaskDialog(
         initialProjectId: widget.project.id,
         projects: [widget.project],
-        onAddTask: (title, dueDate, selectedProjectId) =>
-            _addItem(title, context, selectedProjectId ?? widget.project.id),
+        onAddTask: (title, dueDate, selectedProjectId, priority) => _addItem(
+          title,
+          dueDate,
+          context,
+          selectedProjectId ?? widget.project.id,
+          priority,
+        ),
       ),
     );
   }
 
   Future<void> _addItem(
     String title,
+    DateTime? dueDate,
     BuildContext context,
     int projectId,
+    int priority,
   ) async {
     final currentUser = ref.read(currentUserProvider);
     if (currentUser == null) {
@@ -351,10 +358,12 @@ class _BucketColumnState extends ConsumerState<BucketColumn> {
 
     final newTask = Task(
       title: title,
+      dueDate: dueDate,
       bucketId: widget.bucket.id,
       createdBy: currentUser,
       done: false,
       projectId: projectId,
+      priority: priority,
     );
 
     var success = await ref

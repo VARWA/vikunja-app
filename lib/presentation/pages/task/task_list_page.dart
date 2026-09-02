@@ -154,8 +154,13 @@ class TaskListPage extends ConsumerWidget {
       builder: (_) => AddTaskDialog(
         initialProjectId: projectId,
         projects: projects,
-        onAddTask: (title, dueDate, selectedProjectId) =>
-            _addTask(ref, title, dueDate, selectedProjectId ?? projectId),
+        onAddTask: (title, dueDate, selectedProjectId, priority) => _addTask(
+          ref,
+          title,
+          dueDate,
+          selectedProjectId ?? projectId,
+          priority,
+        ),
       ),
     );
   }
@@ -173,6 +178,7 @@ class TaskListPage extends ConsumerWidget {
     String title,
     DateTime? dueDate,
     int defaultProjectId,
+    int priority,
   ) async {
     final currentUser = ref.read(currentUserProvider);
     if (currentUser == null) {
@@ -184,6 +190,7 @@ class TaskListPage extends ConsumerWidget {
       dueDate: dueDate,
       createdBy: currentUser,
       projectId: defaultProjectId,
+      priority: priority,
     );
 
     var success = await ref

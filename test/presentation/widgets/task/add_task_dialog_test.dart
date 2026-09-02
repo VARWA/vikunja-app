@@ -9,6 +9,8 @@ void main() {
     tester,
   ) async {
     int? selectedProjectId;
+    int? selectedPriority;
+    DateTime? selectedDueDate;
 
     await tester.pumpWidget(
       MaterialApp(
@@ -22,8 +24,10 @@ void main() {
               Project(id: 2, title: 'Work'),
             ],
             initialProjectId: 1,
-            onAddTask: (title, dueDate, projectId) {
+            onAddTask: (title, dueDate, projectId, priority) {
               selectedProjectId = projectId;
+              selectedPriority = priority;
+              selectedDueDate = dueDate;
             },
           ),
         ),
@@ -31,12 +35,32 @@ void main() {
     );
 
     await tester.enterText(find.byType(TextField).first, 'Prepare report');
-    await tester.tap(find.byType(DropdownButtonFormField<int>));
+    final initialDialogHeight = tester.getSize(find.byType(AlertDialog)).height;
+
+    await tester.tap(find.text('Personal'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Work').last);
     await tester.pumpAndSettle();
+
+    await tester.tap(find.text('None'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Tomorrow').last);
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.getSize(find.byType(AlertDialog)).height,
+      initialDialogHeight,
+    );
+
+    await tester.tap(find.text('Unset'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('High').last);
+    await tester.pumpAndSettle();
+
     await tester.tap(find.text('Add'));
 
     expect(selectedProjectId, 2);
+    expect(selectedPriority, 3);
+    expect(selectedDueDate, isNotNull);
   });
 }

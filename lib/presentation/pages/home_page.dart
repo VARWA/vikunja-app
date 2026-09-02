@@ -171,8 +171,13 @@ class HomePageState extends ConsumerState<HomePage> {
       builder: (_) => AddTaskDialog(
         initialProjectId: projectId,
         projects: projects,
-        onAddTask: (title, dueDate, selectedProjectId) =>
-            _addTask(title, dueDate, selectedProjectId ?? projectId, context),
+        onAddTask: (title, dueDate, selectedProjectId, priority) => _addTask(
+          title,
+          dueDate,
+          selectedProjectId ?? projectId,
+          priority,
+          context,
+        ),
         title: title,
       ),
     );
@@ -182,6 +187,7 @@ class HomePageState extends ConsumerState<HomePage> {
     String title,
     DateTime? dueDate,
     int defaultProjectId,
+    int priority,
     BuildContext context,
   ) async {
     final currentUser = ref.read(currentUserProvider);
@@ -194,6 +200,7 @@ class HomePageState extends ConsumerState<HomePage> {
       dueDate: dueDate,
       createdBy: currentUser,
       projectId: defaultProjectId,
+      priority: priority,
     );
 
     var success = await ref

@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:vikunja_app/core/utils/date_extensions.dart';
+import 'package:vikunja_app/core/utils/priority.dart';
 import 'package:vikunja_app/domain/entities/new_task_due.dart';
 import 'package:vikunja_app/domain/entities/project.dart';
-import 'package:vikunja_app/presentation/widgets/date_time_field.dart';
 import 'package:vikunja_app/l10n/gen/app_localizations.dart';
 
 class AddTaskDialog extends StatefulWidget {
-  final void Function(String title, DateTime? dueDate, int? projectId)
+  final void Function(
+    String title,
+    DateTime? dueDate,
+    int? projectId,
+    int priority,
+  )
   onAddTask;
   final String? title;
   final List<Project> projects;
@@ -29,6 +34,7 @@ class AddTaskDialogState extends State<AddTaskDialog> {
   DateTime? dueDate;
   var textController = TextEditingController();
   int? selectedProjectId;
+  int priority = 0;
 
   @override
   void initState() {
@@ -43,7 +49,7 @@ class AddTaskDialogState extends State<AddTaskDialog> {
 
   @override
   Widget build(BuildContext context) {
-    var dateTime = DateTime.now();
+    final l10n = AppLocalizations.of(context);
 
     return AlertDialog(
       scrollable: true,
@@ -57,8 +63,9 @@ class AddTaskDialogState extends State<AddTaskDialog> {
             maxLines: null,
             autofocus: true,
             decoration: InputDecoration(
-              labelText: AppLocalizations.of(context).newTaskName,
-              hintText: AppLocalizations.of(context).newTaskExample,
+              labelText: l10n.newTaskName,
+              hintText: l10n.newTaskExample,
+              border: const OutlineInputBorder(),
             ),
             controller: textController,
           ),
@@ -68,10 +75,8 @@ class AddTaskDialogState extends State<AddTaskDialog> {
               child: DropdownButtonFormField<int>(
                 value: selectedProjectId,
                 decoration: InputDecoration(
-                  labelText: AppLocalizations.of(context).project,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+                  labelText: l10n.project,
+                  border: const OutlineInputBorder(),
                 ),
                 items: widget.projects
                     .map(
@@ -92,90 +97,80 @@ class AddTaskDialogState extends State<AddTaskDialog> {
               ),
             ),
           Padding(
-            padding: const EdgeInsets.only(top: 16.0, bottom: 8.0),
-            child: Text(AppLocalizations.of(context).dueDate),
-          ),
-          Wrap(
-            spacing: 8,
-            children: [
-              taskDueList(
-                AppLocalizations.of(context).dueOptionNone,
-                NewTaskDue.none,
+            padding: const EdgeInsets.only(top: 16.0),
+            child: DropdownButtonFormField<NewTaskDue>(
+              value: newTaskDue,
+              isExpanded: true,
+              decoration: InputDecoration(
+                labelText: l10n.dueDateLabel,
+                prefixIcon: const Icon(Icons.event_outlined),
+                border: const OutlineInputBorder(),
               ),
-              if (dateTime.hour < 21)
-                taskDueList(
-                  AppLocalizations.of(context).dueOptionToday,
-                  NewTaskDue.today,
-                ),
-              taskDueList(
-                AppLocalizations.of(context).dueOptionTomorrow,
-                NewTaskDue.tomorrow,
-              ),
-              taskDueList(
-                AppLocalizations.of(context).dueOptionNextMonday,
-                NewTaskDue.nextMonday,
-              ),
-              if (dateTime.weekday != DateTime.sunday || dateTime.hour < 21)
-                taskDueList(
-                  AppLocalizations.of(context).dueOptionThisWeekend,
-                  NewTaskDue.weekend,
-                ),
-              taskDueList(
-                AppLocalizations.of(context).dueOptionLaterThisWeek,
-                NewTaskDue.laterThisWeek,
-              ),
-              taskDueList(
-                AppLocalizations.of(context).dueInOneWeek,
-                NewTaskDue.nextWeek,
-              ),
-              taskDueList(
-                AppLocalizations.of(context).dueOptionCustom,
-                NewTaskDue.custom,
-              ),
-            ],
-          ),
-          if (newTaskDue == NewTaskDue.custom)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: VikunjaDateTimeField(
-                label: AppLocalizations.of(context).enterExactTime,
-                onChanged: (value) {
-                  setState(() => newTaskDue = NewTaskDue.custom);
-                  dueDate = value;
-                },
-              ),
-            ),
-          if (newTaskDue != NewTaskDue.custom && dueDate != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 8.0,
-                vertical: 16,
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.date_range),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 16.0),
-                    child: Text(
-                      dueDate!.formatShort(),
-                      style: Theme.of(context).textTheme.bodyLarge,
+              selectedItemBuilder: (context) => _dueOptions
+                  .map(
+                    (option) => Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        option == NewTaskDue.custom && dueDate != null
+                            ? dueDate!.formatShort()
+                            : _dueLabel(l10n, option),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                  )
+                  .toList(),
+              items: _dueOptions
+                  .map(
+                    (option) => DropdownMenuItem(
+                      value: option,
+                      child: Text(_dueLabel(l10n, option)),
+                    ),
+                  )
+                  .toList(),
+              onChanged: _changeDueDate,
             ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 16.0),
+            child: DropdownButtonFormField<int>(
+              value: priority,
+              isExpanded: true,
+              decoration: InputDecoration(
+                labelText: l10n.priority,
+                prefixIcon: const Icon(Icons.flag_outlined),
+                border: const OutlineInputBorder(),
+              ),
+              items: List.generate(
+                6,
+                (value) => DropdownMenuItem(
+                  value: value,
+                  child: Text(priorityToString(l10n, value)),
+                ),
+              ),
+              onChanged: (value) {
+                setState(() {
+                  priority = value ?? 0;
+                });
+              },
+            ),
+          ),
         ],
       ),
       actions: <Widget>[
         TextButton(
-          child: Text(AppLocalizations.of(context).cancel),
+          child: Text(l10n.cancel),
           onPressed: () => Navigator.pop(context),
         ),
         TextButton(
-          child: Text(AppLocalizations.of(context).add),
+          child: Text(l10n.add),
           onPressed: () {
             if (textController.text.isNotEmpty) {
-              widget.onAddTask(textController.text, dueDate, selectedProjectId);
+              widget.onAddTask(
+                textController.text,
+                dueDate,
+                selectedProjectId,
+                priority,
+              );
             }
             Navigator.pop(context);
           },
@@ -184,21 +179,75 @@ class AddTaskDialogState extends State<AddTaskDialog> {
     );
   }
 
-  Widget taskDueList(String name, NewTaskDue thisNewTaskDue) {
-    return ChoiceChip(
-      label: Text(name),
-      selected: newTaskDue == thisNewTaskDue,
-      onSelected: (value) {
-        newTaskDue = thisNewTaskDue;
-        setState(() {
-          if (newTaskDue == NewTaskDue.custom ||
-              newTaskDue == NewTaskDue.none) {
-            dueDate = null;
-          } else {
-            dueDate = newTaskDue.calculateDate(DateTime.now());
-          }
-        });
-      },
+  static const _dueOptions = [
+    NewTaskDue.none,
+    NewTaskDue.today,
+    NewTaskDue.tomorrow,
+    NewTaskDue.nextMonday,
+    NewTaskDue.weekend,
+    NewTaskDue.laterThisWeek,
+    NewTaskDue.nextWeek,
+    NewTaskDue.custom,
+  ];
+
+  String _dueLabel(AppLocalizations l10n, NewTaskDue option) {
+    return switch (option) {
+      NewTaskDue.none => l10n.dueOptionNone,
+      NewTaskDue.today => l10n.dueOptionToday,
+      NewTaskDue.tomorrow => l10n.dueOptionTomorrow,
+      NewTaskDue.nextMonday => l10n.dueOptionNextMonday,
+      NewTaskDue.weekend => l10n.dueOptionThisWeekend,
+      NewTaskDue.laterThisWeek => l10n.dueOptionLaterThisWeek,
+      NewTaskDue.nextWeek => l10n.dueInOneWeek,
+      NewTaskDue.custom => l10n.dueOptionCustom,
+    };
+  }
+
+  Future<void> _changeDueDate(NewTaskDue? option) async {
+    if (option == null) {
+      return;
+    }
+
+    if (option == NewTaskDue.custom) {
+      final picked = await _pickCustomDueDate();
+      if (!mounted || picked == null) {
+        return;
+      }
+      setState(() {
+        newTaskDue = option;
+        dueDate = picked;
+      });
+      return;
+    }
+
+    setState(() {
+      newTaskDue = option;
+      dueDate = option == NewTaskDue.none
+          ? null
+          : option.calculateDate(DateTime.now());
+    });
+  }
+
+  Future<DateTime?> _pickCustomDueDate() async {
+    final initial = dueDate ?? DateTime.now();
+    final date = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime(1900),
+      lastDate: DateTime(2100),
     );
+    if (date == null || !mounted) {
+      return null;
+    }
+
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(initial),
+    );
+    if (time == null) {
+      return null;
+    }
+
+    return DateTime(date.year, date.month, date.day, time.hour, time.minute);
   }
 }
