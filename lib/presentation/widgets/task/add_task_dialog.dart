@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:vikunja_app/core/theming/app_colors.dart';
 import 'package:vikunja_app/core/utils/date_extensions.dart';
 import 'package:vikunja_app/core/utils/priority.dart';
 import 'package:vikunja_app/domain/entities/new_task_due.dart';
@@ -137,14 +138,23 @@ class AddTaskDialogState extends State<AddTaskDialog> {
               isExpanded: true,
               decoration: InputDecoration(
                 labelText: l10n.priority,
-                prefixIcon: const Icon(Icons.flag_outlined),
                 border: const OutlineInputBorder(),
               ),
               items: List.generate(
                 6,
                 (value) => DropdownMenuItem(
                   value: value,
-                  child: Text(priorityToString(l10n, value)),
+                  child: Row(
+                    children: [
+                      Icon(
+                        value == 0 ? Icons.flag_outlined : Icons.flag,
+                        key: ValueKey('priority-icon-$value'),
+                        color: _priorityColor(context, value),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(child: Text(priorityToString(l10n, value))),
+                    ],
+                  ),
                 ),
               ),
               onChanged: (value) {
@@ -200,6 +210,22 @@ class AddTaskDialogState extends State<AddTaskDialog> {
       NewTaskDue.laterThisWeek => l10n.dueOptionLaterThisWeek,
       NewTaskDue.nextWeek => l10n.dueInOneWeek,
       NewTaskDue.custom => l10n.dueOptionCustom,
+    };
+  }
+
+  Color _priorityColor(BuildContext context, int value) {
+    final theme = Theme.of(context);
+    final appColors = theme.extension<AppColors>();
+    final warning = appColors?.warning ?? Colors.orange;
+    final danger = appColors?.danger ?? Colors.red;
+
+    return switch (value) {
+      1 => appColors?.success ?? Colors.green,
+      2 => warning,
+      3 => danger,
+      4 => danger,
+      5 => danger,
+      _ => theme.colorScheme.onSurfaceVariant,
     };
   }
 

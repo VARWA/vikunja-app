@@ -57,6 +57,11 @@ void main() {
     await tester.tap(find.text('High').last);
     await tester.pumpAndSettle();
 
+    final priorityIcon = tester.widget<Icon>(
+      find.byKey(const ValueKey('priority-icon-3')),
+    );
+    expect(priorityIcon.color, Colors.red);
+
     await tester.tap(find.text('Add'));
 
     expect(selectedProjectId, 2);
