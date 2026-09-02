@@ -12,12 +12,14 @@ dependencies:
   flutter_localizations:
     sdk: flutter
 
-  background_downloader: ^9.5.9
+  # 9.5.9 fails to compile against this project's Kotlin/AGP.
+  background_downloader: '>=9.2.3 <=9.5.4'
   collection: ^1.18.0
   cronet_http: ^1.2.0
   cupertino_http: ^2.0.2
   datetime_picker_formfield_new: ^2.1.0
-  dynamic_color: ^1.7.0
+  # 1.9.0's Android Gradle script requires AGP built-in Kotlin.
+  dynamic_color: '>=1.7.0 <1.9.0'
   flutter_colorpicker: ^1.1.0
   flutter_lints: ^6.0.0
   flutter_local_notifications: ^20.0.0
@@ -35,8 +37,9 @@ dependencies:
   path_provider: ^2.1.6
   permission_handler: ^12.0.3
   riverpod_annotation: ^2.6.1
-  sentry_flutter: ^9.28.0
-  sentry_logging: ^9.28.0
+  # 9.20+ fails Android compile (missing SentryFlutterReplayRecorder).
+  sentry_flutter: '>=9.6.0 <=9.14.0'
+  sentry_logging: '>=9.6.0 <=9.14.0'
   timezone: ^0.10.0
   app_links: ^6.4.0
   crypto: ^3.0.6
