@@ -35,22 +35,14 @@ void main() {
     );
 
     await tester.enterText(find.byType(TextField).first, 'Prepare report');
-    final initialDialogHeight = tester.getSize(find.byType(AlertDialog)).height;
 
     await tester.tap(find.text('Personal'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Work').last);
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('None'));
+    await tester.tap(find.text('Tomorrow'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Tomorrow').last);
-    await tester.pumpAndSettle();
-
-    expect(
-      tester.getSize(find.byType(AlertDialog)).height,
-      initialDialogHeight,
-    );
 
     await tester.tap(find.text('Unset'));
     await tester.pumpAndSettle();
