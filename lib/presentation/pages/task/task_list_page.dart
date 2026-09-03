@@ -143,6 +143,33 @@ class TaskListPage extends ConsumerWidget {
                   ),
                 ),
               ),
+              PopupMenuItem(
+                child: InkWell(
+                  onTap: () {
+                    _displayDoneTasksChanged(
+                      ref,
+                      context,
+                      !model.displayDoneTasks,
+                    );
+                  },
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Text(AppLocalizations.of(context).showDoneTasks),
+                      Checkbox(
+                        value: model.displayDoneTasks,
+                        onChanged: (bool? value) {
+                          _displayDoneTasksChanged(
+                            ref,
+                            context,
+                            !model.displayDoneTasks,
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ];
           },
         ),
@@ -155,6 +182,17 @@ class TaskListPage extends ConsumerWidget {
     ref
         .read(taskPageControllerProvider.notifier)
         .setLandingPageOnlyDueDateTasks(newValue);
+  }
+
+  void _displayDoneTasksChanged(
+    WidgetRef ref,
+    BuildContext context,
+    bool newValue,
+  ) {
+    Navigator.pop(context);
+    ref
+        .read(taskPageControllerProvider.notifier)
+        .setLandingPageDisplayDoneTasks(newValue);
   }
 
   void _addItemDialog(
@@ -221,7 +259,7 @@ class TaskListPage extends ConsumerWidget {
       onCheckedChanged: (value) async {
         var success = await ref
             .read(taskPageControllerProvider.notifier)
-            .markAsDone(task);
+            .markAsDone(task, value);
         if (!success && context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

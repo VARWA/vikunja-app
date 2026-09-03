@@ -15,10 +15,10 @@ part 'project_controller.g.dart';
 
 @riverpod
 class ProjectController extends _$ProjectController with PaginationMixin<Task> {
-  String get _currentSearchQuery => state.value?.searchQuery ?? '';
+  String get _currentSearchQuery => state.valueOrNull?.searchQuery ?? '';
 
   bool _isCurrentSearch(String searchQuery) {
-    final current = state.value;
+    final current = state.valueOrNull;
     return current != null &&
         current.searchQuery == searchQuery &&
         !current.isSearching;
@@ -250,7 +250,7 @@ class ProjectController extends _$ProjectController with PaginationMixin<Task> {
   }
 
   bool _matchesSearchRequest(String searchQuery) {
-    final latest = state.value;
+    final latest = state.valueOrNull;
     return latest != null && latest.searchQuery == searchQuery;
   }
 
@@ -264,15 +264,20 @@ class ProjectController extends _$ProjectController with PaginationMixin<Task> {
     var repo = ref.read(taskRepositoryProvider);
     final query = searchQuery ?? _currentSearchQuery;
 
-    Map<String, List<String>> queryParams = view == null
+    // View endpoints AND the view filter (default list views use `done = false`),
+    // so showing done tasks has to go through the project endpoint. That
+    // endpoint also rejects `sort_by=position` without a view ID (error 4026).
+    final useViewEndpoint = view != null && !displayDoneTasks;
+
+    Map<String, List<String>> queryParams = useViewEndpoint
         ? {
-            "sort_by": ["done", "id"],
-            "order_by": ["asc", "desc"],
+            "sort_by": ["position"],
+            "order_by": ["asc"],
             "page": ["$page"],
           }
         : {
-            "sort_by": ["position"],
-            "order_by": ["asc"],
+            "sort_by": ["done", "id"],
+            "order_by": ["asc", "desc"],
             "page": ["$page"],
           };
 
@@ -288,9 +293,9 @@ class ProjectController extends _$ProjectController with PaginationMixin<Task> {
       queryParams['filter'] = [combineFilterClauses(filterParts)];
     }
 
-    return view == null
-        ? await repo.getAllByProject(projectId, queryParams)
-        : await repo.getAllByProjectView(projectId, view, queryParams);
+    return useViewEndpoint
+        ? await repo.getAllByProjectView(projectId, view!, queryParams)
+        : await repo.getAllByProject(projectId, queryParams);
   }
 
   Future<Response<List<Bucket>>> _loadBuckets({
@@ -499,29 +504,31 @@ class ProjectController extends _$ProjectController with PaginationMixin<Task> {
   }
 
   Future<bool> setDisplayDoneTasks(bool displayDoneTasks) async {
-    await ref
-        .read(settingsRepositoryProvider)
-        .setDisplayDoneTasks(state.value!.project.id, displayDoneTasks);
-
-    var value = state.value;
-    if (value != null) {
-      int? viewId = _getFirstListViewIdFromProject(value.project);
-      var tasksResponse = await _loadTasks(
-        value.project.id,
-        displayDoneTasks,
-        viewId,
-      );
-      if (tasksResponse.isSuccessful) {
-        var tasks = tasksResponse.toSuccess().body;
-        state = AsyncData(
-          value.copyWith(tasks: tasks, displayDoneTask: displayDoneTasks),
-        );
-        return true;
-      } else {
-        return false;
-      }
+    final value = state.valueOrNull;
+    if (value == null) {
+      return false;
     }
 
+    await ref
+        .read(settingsRepositoryProvider)
+        .setDisplayDoneTasks(value.project.id, displayDoneTasks);
+
+    var tasksResponse = await _loadTasks(
+      value.project.id,
+      displayDoneTasks,
+      _getFirstListViewIdFromProject(value.project),
+    );
+    if (tasksResponse.isSuccessful) {
+      state = AsyncData(
+        value.copyWith(
+          tasks: tasksResponse.toSuccess().body,
+          displayDoneTask: displayDoneTasks,
+        ),
+      );
+      return true;
+    }
+
+    state = AsyncData(value.copyWith(displayDoneTask: displayDoneTasks));
     return false;
   }
 
@@ -544,21 +551,46 @@ class ProjectController extends _$ProjectController with PaginationMixin<Task> {
     return false;
   }
 
-  Future<bool> markAsDone(Task task) async {
-    task.done = true;
+  Future<bool> markAsDone(Task task, bool done) async {
+    if (task.loading) {
+      return false;
+    }
+
+    final previousDone = task.done;
+    task.loading = true;
+    _emitTasks(state.value?.tasks);
+
+    task.done = done;
     var response = await ref.read(taskRepositoryProvider).update(task);
+    task.loading = false;
+
+    var value = state.value;
     if (response.isSuccessful) {
-      var value = state.value;
       if (value != null) {
-        var tasks = value.tasks;
-        tasks.removeWhere((element) => element.id == task.id);
-        state = AsyncData(value.copyWith(tasks: tasks));
+        if (done && !value.displayDoneTask) {
+          final tasks = List<Task>.from(value.tasks)
+            ..removeWhere((element) => element.id == task.id);
+          state = AsyncData(value.copyWith(tasks: tasks));
+        } else {
+          _emitTasks(value.tasks);
+        }
 
         return true;
       }
     }
 
+    task.done = previousDone;
+    _emitTasks(value?.tasks);
     return false;
+  }
+
+  void _emitTasks(List<Task>? tasks) {
+    final value = state.value;
+    if (value == null || tasks == null) {
+      return;
+    }
+
+    state = AsyncData(value.copyWith(tasks: List<Task>.from(tasks)));
   }
 
   void reload() {

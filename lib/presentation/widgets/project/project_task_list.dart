@@ -203,7 +203,7 @@ class ProjectTaskList extends ConsumerWidget {
       onCheckedChanged: (value) async {
         var success = await ref
             .read(projectControllerProvider(project).notifier)
-            .markAsDone(task);
+            .markAsDone(task, value);
         if (!success && ref.context.mounted) {
           ScaffoldMessenger.of(ref.context).showSnackBar(
             SnackBar(
